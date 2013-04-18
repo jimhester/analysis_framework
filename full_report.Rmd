@@ -1,5 +1,5 @@
-```{r child="README"}
+```{r child="README.md"}
 ```
 Author: [Jim Hester](http://jimhester.com)
 Created: 2013 Apr 02 03:28:29 PM
-Last Modified: 2013 Apr 18 09:18:08 AM
+Last Modified: 2013 Apr 18 09:44:34 AM
