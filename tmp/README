@@ -1,0 +1,2 @@
+This directory is for intermediate analysis files, initial input files should
+go in data/ final output files should go in output/.

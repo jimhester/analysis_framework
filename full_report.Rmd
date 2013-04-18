@@ -1,0 +1,5 @@
+```{r child="README"}
+```
+Author: [Jim Hester](http://jimhester.com)
+Created: 2013 Apr 02 03:28:29 PM
+Last Modified: 2013 Apr 18 09:18:08 AM

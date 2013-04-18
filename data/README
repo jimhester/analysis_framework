@@ -1,0 +1,2 @@
+This directory is for initial input files, intermediate files should go it tmp/,
+final output files should go in output/.
