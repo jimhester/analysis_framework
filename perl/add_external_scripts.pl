@@ -5,7 +5,7 @@ use autodie qw(:all);
 ###############################################################################
 # By Jim Hester
 # Created: 2013 Apr 19 10:57:28 AM
-# Last Modified: 2013 Apr 19 02:35:45 PM
+# Last Modified: 2013 Apr 19 03:13:05 PM
 # Title:add_external_scripts.pl
 # Purpose:Add external scripts as code blocks
 ###############################################################################
@@ -13,13 +13,16 @@ use autodie qw(:all);
 ###############################################################################
 use Getopt::Long;
 use Pod::Usage;
-my @engines = ( 'bash',    #bash
-                'zsh',     #zsh
+my @engines = ( 'bash',      #bash
+                'zsh',       #zsh
+                'perl',      #perl
+                'python',    #python
+                'ruby',      #python
               );
-my @suffixes = ( '.pl',     #perl
-                 '.py',     #python
-                 '.rb',     #ruby
-                 '.sh',     #bash
+my @suffixes = ( '.pl',       #perl
+                 '.py',       #python
+                 '.rb',       #ruby
+                 '.sh',       #bash
                );
 my %args = ( engine => \@engines, suffix => \@suffixes );
 GetOptions( \%args, 'engine=s@', 'suffix=s@', 'help|?', 'man' )
@@ -46,14 +49,16 @@ my $data = slurp();
 #TODO check paths for includes?
 my %included_scripts;
 
-while (
-  $data =~ m{ [`]{3} \{ [^`]+ read_chunk [('\s]+ ([\S]+ $suffix_regex) 
-  .*? engine [\s='"]+ $engine_regex ['"] .*? [`]{3} }ximsg )
-{
+my $included_regex =
+  qr/[`]{3} { [^`]+ read_chunk [\('\s]+ ([\S]+ $suffix_regex) .*? engine [\s='"]+ $engine_regex/xims;
+
+while ( $data =~ m/$included_regex/g ) {
   $included_scripts{ remove_path( remove_suffix($1) ) }++;
 }
 
-$data =~ s{ ( [`]{3} \{ [^\}]+ engine [\s='"]+ ($engine_regex) .*? [`]{3} ) }{
+my $sub_regex = qr{( [`]{3} \{ [^\}]+ engine [\s='"]+ ($engine_regex) .*? [`]{3} )}xims; 
+
+$data =~ s{$sub_regex}{
   my($block, $engine) = ($1, $2);
   my($pre)='';
   while($block =~ m{ ([\S]+ $suffix_regex) }xmsg){
@@ -75,7 +80,7 @@ $data =~ s{ ( [`]{3} \{ [^\}]+ engine [\s='"]+ ($engine_regex) .*? [`]{3} ) }{
     }
   }
   $pre.$block;
-}eximsg;
+}eg;
 
 print $data;
 
@@ -88,7 +93,7 @@ sub expand_commas {
 #make a quoted match_group for the array
 sub generate_match_group {
   my ($array_ref) = @_;
-  return '(' . join( "|", map {"\Q$_"} @{$array_ref} ) . ')';
+  return '(?:' . join( "|", map {"\Q$_"} @{$array_ref} ) . ')';
 }
 
 sub build_script_chunk {
