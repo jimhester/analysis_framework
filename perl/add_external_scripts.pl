@@ -5,7 +5,7 @@ use autodie qw(:all);
 ###############################################################################
 # By Jim Hester
 # Created: 2013 Apr 19 10:57:28 AM
-# Last Modified: 2013 Apr 19 01:49:30 PM
+# Last Modified: 2013 Apr 19 02:35:45 PM
 # Title:add_external_scripts.pl
 # Purpose:Add external scripts as code blocks
 ###############################################################################
@@ -30,7 +30,6 @@ pod2usage("$0: No files given.") if ( ( @ARGV == 0 ) && ( -t STDIN ) );
 ###############################################################################
 # add_external_scripts.pl
 ###############################################################################
-use File::Spec;
 
 #allow comma separated arguments
 @engines  = expand_commas( \@engines );
@@ -65,12 +64,12 @@ $data =~ s{ ( [`]{3} \{ [^\}]+ engine [\s='"]+ ($engine_regex) .*? [`]{3} ) }{
     if(not exists $included_scripts{$label}){
 
       #TODO this may be broken in zsh if your path is not the same as bash's
-      my $abs_path = `/usr/bin/which $script_name`; chomp $abs_path;
+      my $tilde_path = `/usr/bin/which --show-tilde $script_name`; chomp $tilde_path;
+      my ($abs_path) = glob($tilde_path);
       if( -e $abs_path ){
 
         #convert to relative path
-        my $rel_path = File::Spec->abs2rel($abs_path);
-        $pre .= build_script_chunk($rel_path, $label, $engine);
+        $pre .= build_script_chunk($tilde_path, $label, $engine);
         $included_scripts{$label}++;
       }
     }
