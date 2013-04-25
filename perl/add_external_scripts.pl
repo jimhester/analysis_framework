@@ -5,7 +5,7 @@ use autodie qw(:all);
 ###############################################################################
 # By Jim Hester
 # Created: 2013 Apr 19 10:57:28 AM
-# Last Modified: 2013 Apr 19 03:13:05 PM
+# Last Modified: 2013 Apr 25 02:56:23 PM
 # Title:add_external_scripts.pl
 # Purpose:Add external scripts as code blocks
 ###############################################################################
@@ -13,19 +13,17 @@ use autodie qw(:all);
 ###############################################################################
 use Getopt::Long;
 use Pod::Usage;
-my @engines = ( 'bash',      #bash
-                'zsh',       #zsh
-                'perl',      #perl
-                'python',    #python
-                'ruby',      #python
-              );
-my @suffixes = ( '.pl',       #perl
-                 '.py',       #python
-                 '.rb',       #ruby
-                 '.sh',       #bash
-               );
-my %args = ( engine => \@engines, suffix => \@suffixes );
-GetOptions( \%args, 'engine=s@', 'suffix=s@', 'help|?', 'man' )
+my %languages = ( '.sh'  => 'bash',      #bash
+                  '.pl'  => 'perl',      #perl
+                  '.py'  => 'python',    #python
+                  '.rb'  => 'ruby',      #ruby
+                  '.zsh' => 'zsh',       #zsh
+                );
+
+my @suffixes = keys %languages;
+my @engines  = map { $languages{$_} } keys %languages;
+my %args     = ( languages => \%languages );
+GetOptions( \%args, 'languages=s%', 'help|?', 'man' )
   or pod2usage(2);
 pod2usage(2) if exists $args{help};
 pod2usage( -verbose => 2 ) if exists $args{man};
@@ -56,13 +54,14 @@ while ( $data =~ m/$included_regex/g ) {
   $included_scripts{ remove_path( remove_suffix($1) ) }++;
 }
 
-my $sub_regex = qr{( [`]{3} \{ [^\}]+ engine [\s='"]+ ($engine_regex) .*? [`]{3} )}xims; 
+my $sub_regex =
+  qr{( [`]{3} \{ [^\}]+ engine [\s='"]+ ($engine_regex) .*? [`]{3} )}xims;
 
 $data =~ s{$sub_regex}{
   my($block, $engine) = ($1, $2);
   my($pre)='';
-  while($block =~ m{ ([\S]+ $suffix_regex) }xmsg){
-    my ($script_name) = $1;
+  while($block =~ m{ ([\S]+ ($suffix_regex) ) }xmsg){
+    my ($script_name, $suffix) = ($1, $2);
     my $label = remove_path(remove_suffix($script_name));
 
     #add include blocks to scripts which are not already included
@@ -74,7 +73,7 @@ $data =~ s{$sub_regex}{
       if( -e $abs_path ){
 
         #convert to relative path
-        $pre .= build_script_chunk($tilde_path, $label, $engine);
+        $pre .= build_script_chunk($tilde_path, $label, $suffix);
         $included_scripts{$label}++;
       }
     }
@@ -97,7 +96,12 @@ sub generate_match_group {
 }
 
 sub build_script_chunk {
-  my ( $path, $label, $engine ) = @_;
+  my ( $path, $label, $suffix ) = @_;
+
+  #should always be true
+  die unless exists $languages{$suffix};
+
+  my ($engine) = $languages{$suffix};
 
   return << "END_CHUNK";
 ```{r, echo=F, cache=FALSE}
