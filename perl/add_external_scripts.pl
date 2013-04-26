@@ -5,7 +5,7 @@ use autodie qw(:all);
 ###############################################################################
 # By Jim Hester
 # Created: 2013 Apr 19 10:57:28 AM
-# Last Modified: 2013 Apr 25 02:56:23 PM
+# Last Modified: 2013 Apr 25 03:06:34 PM
 # Title:add_external_scripts.pl
 # Purpose:Add external scripts as code blocks
 ###############################################################################
@@ -13,7 +13,8 @@ use autodie qw(:all);
 ###############################################################################
 use Getopt::Long;
 use Pod::Usage;
-my %languages = ( '.sh'  => 'bash',      #bash
+my %languages = ( '.r'   => 'r',         #r
+                  '.sh'  => 'bash',      #bash
                   '.pl'  => 'perl',      #perl
                   '.py'  => 'python',    #python
                   '.rb'  => 'ruby',      #ruby
@@ -37,8 +38,8 @@ pod2usage("$0: No files given.") if ( ( @ARGV == 0 ) && ( -t STDIN ) );
 @suffixes = expand_commas( \@suffixes );
 
 #create group matches
-my $suffix_regex = generate_match_group( \@suffixes );
-my $engine_regex = generate_match_group( \@engines );
+my $suffix_group = generate_match_group( \@suffixes );
+my $engine_group = generate_match_group( \@engines );
 
 #read all data
 my $data = slurp();
@@ -48,26 +49,26 @@ my $data = slurp();
 my %included_scripts;
 
 my $included_regex =
-  qr/[`]{3} { [^`]+ read_chunk [\('\s]+ ([\S]+ $suffix_regex) .*? engine [\s='"]+ $engine_regex/xims;
+  qr/[`]{3} { [^`]+ read_chunk [\('\s]+ ([\S]+ $suffix_group) .*? engine [\s='"]+ $engine_group/xims;
 
 while ( $data =~ m/$included_regex/g ) {
   $included_scripts{ remove_path( remove_suffix($1) ) }++;
 }
 
 my $sub_regex =
-  qr{( [`]{3} \{ [^\}]+ engine [\s='"]+ ($engine_regex) .*? [`]{3} )}xims;
+  qr{( [`]{3} \{ [^\}]+ engine [\s='"]+ ($engine_group) .*? [`]{3} )}xims;
 
 $data =~ s{$sub_regex}{
   my($block, $engine) = ($1, $2);
   my($pre)='';
-  while($block =~ m{ ([\S]+ ($suffix_regex) ) }xmsg){
+  while($block =~ m{ ([\S]+ ($suffix_group) ) }xmsg){
     my ($script_name, $suffix) = ($1, $2);
     my $label = remove_path(remove_suffix($script_name));
 
     #add include blocks to scripts which are not already included
     if(not exists $included_scripts{$label}){
 
-      #TODO this may be broken in zsh if your path is not the same as bash's
+      #TODO this may be broken if your shells path does not use which
       my $tilde_path = `/usr/bin/which --show-tilde $script_name`; chomp $tilde_path;
       my ($abs_path) = glob($tilde_path);
       if( -e $abs_path ){
