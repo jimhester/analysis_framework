@@ -5,7 +5,7 @@ use autodie qw(:all);
 ###############################################################################
 # By Jim Hester
 # Created: 2013 Apr 19 10:57:28 AM
-# Last Modified: 2013 Apr 25 03:06:34 PM
+# Last Modified: 2013 May 06 12:08:23 PM
 # Title:add_external_scripts.pl
 # Purpose:Add external scripts as code blocks
 ###############################################################################
@@ -44,45 +44,102 @@ my $engine_group = generate_match_group( \@engines );
 #read all data
 my $data = slurp();
 
+my $has_mtime_function = qr/mtime \s+ <- \s+ function [(] files [)] /xmsi;
+
 #find all already included scripts
 #TODO check paths for includes?
 my %included_scripts;
 
 my $included_regex =
-  qr/[`]{3} { [^`]+ read_chunk [\('\s]+ ([\S]+ $suffix_group) .*? engine [\s='"]+ $engine_group/xims;
+  qr/``` { [^`]+ read_chunk [\('\s]+ ([\S]+ $suffix_group) .*? engine [\s='"]+ $engine_group/xims;
 
 while ( $data =~ m/$included_regex/g ) {
   $included_scripts{ remove_path( remove_suffix($1) ) }++;
 }
 
 my $sub_regex =
-  qr{( [`]{3} \{ [^\}]+ engine [\s='"]+ ($engine_group) .*? [`]{3} )}xims;
+  qr/ ( ```{r [^}]+ engine [\s='"]+ $engine_group [^}]+ ) } ( [^`]+ ``` )/xims;
 
 $data =~ s{$sub_regex}{
-  my($block, $engine) = ($1, $2);
+  my($options, $block) = ($1, $2);
   my($pre)='';
+  my @scripts;
   while($block =~ m{ ([\S]+ ($suffix_group) ) }xmsg){
     my ($script_name, $suffix) = ($1, $2);
-    my $label = remove_path(remove_suffix($script_name));
 
-    #add include blocks to scripts which are not already included
-    if(not exists $included_scripts{$label}){
-
-      #TODO this may be broken if your shells path does not use which
-      my $tilde_path = `/usr/bin/which --show-tilde $script_name`; chomp $tilde_path;
-      my ($abs_path) = glob($tilde_path);
-      if( -e $abs_path ){
-
-        #convert to relative path
-        $pre .= build_script_chunk($tilde_path, $label, $suffix);
-        $included_scripts{$label}++;
-      }
-    }
+    $pre .= generate_script_include_block($script_name, $suffix);
+    push @scripts, $script_name;
   }
-  $pre.$block;
+  $options = generate_cache_dependency_options($options, \@scripts);
+  $pre . $options . '\}' . $block;
 }eg;
 
 print $data;
+
+sub generate_cache_dependency_options {
+  my ( $options, $script_name_ref ) = @_;
+  return $options unless @{$script_name_ref};
+  my %dependencies = map { $_ => 1 } @{$script_name_ref};
+
+  my $cache_extra_regex =
+    qr/ ( cache [.] extra \s* = \s* mtime ) [(] (?:c[(])* ([^)]+) [)] [)]* /xims;
+  if ( $options =~ m/$cache_extra_regex/ ) {
+
+    #add additional scripts to cache.extra if not already there
+    $options =~ s{$cache_extra_regex}{
+      my($before, $files) = ($1, $2);
+      while($files =~ m/'([^']+)'/g){
+        $dependencies{$1}++;
+      }
+    $before .= '(' . generate_concat(sort keys %dependencies ) . ')';
+    }eg;
+  }
+  else {
+    $options .= ', cache.extra=mtime('
+      . generate_concat( sort keys %dependencies ) . ')';
+  }
+  return $options;
+}
+
+sub generate_concat {
+  return
+    'c(' . join( ', ', map { q['] . relative_path($_) . q['] } @_ ) . ')';
+}
+
+sub generate_script_include_block {
+  my ( $script_name, $suffix ) = @_;
+  my $label = remove_path( remove_suffix($script_name) );
+
+  #add include blocks to scripts which are not already included
+  if ( not exists $included_scripts{$label} ) {
+
+    #TODO this may be broken if your shells path does not use which
+    my $relative_path = relative_path($script_name);
+    my ($abs_path) = glob($relative_path);
+    if ( -e $abs_path ) {
+
+      #convert to relative path
+      $included_scripts{$label}++;
+      return ( build_script_chunk( $relative_path, $label, $suffix ) );
+    }
+  }
+
+  #add include blocks to scripts which are not already included
+  if ( not exists $included_scripts{$label} ) {
+
+  }
+}
+
+sub relative_path {
+  my ($script_name) = @_;
+
+  return $script_name if -e $script_name;
+
+  #TODO this may be broken if your shells path does not use which
+  my $relative_path = `/usr/bin/which --show-tilde --show-dot $script_name`;
+  chomp $relative_path;
+  return $relative_path;
+}
 
 #allow comma separated lists for arguments
 sub expand_commas {
@@ -93,7 +150,7 @@ sub expand_commas {
 #make a quoted match_group for the array
 sub generate_match_group {
   my ($array_ref) = @_;
-  return '(?:' . join( "|", map {"\Q$_"} @{$array_ref} ) . ')';
+  return '(?:' . join( "|", map {"\Q$_\E"} @{$array_ref} ) . ')';
 }
 
 sub build_script_chunk {
