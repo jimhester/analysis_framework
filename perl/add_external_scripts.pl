@@ -5,7 +5,7 @@ use autodie qw(:all);
 ###############################################################################
 # By Jim Hester
 # Created: 2013 Apr 19 10:57:28 AM
-# Last Modified: 2013 May 06 12:08:23 PM
+# Last Modified: 2013 May 06 02:08:28 PM
 # Title:add_external_scripts.pl
 # Purpose:Add external scripts as code blocks
 ###############################################################################
@@ -150,7 +150,7 @@ sub expand_commas {
 #make a quoted match_group for the array
 sub generate_match_group {
   my ($array_ref) = @_;
-  return '(?:' . join( "|", map {"\Q$_\E"} @{$array_ref} ) . ')';
+  return '(?:' . join( "|", map {quotemeta($_)} @{$array_ref} ) . ')';
 }
 
 sub build_script_chunk {
