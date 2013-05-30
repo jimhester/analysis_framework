@@ -5,6 +5,7 @@ Version: 1.0
 License: GPL-3
 Title: 
 Description: 
+VignetteBuilder: knitr
 Suggests:
     testthat,
     roxygen2,
