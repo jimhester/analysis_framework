@@ -5,7 +5,7 @@ use autodie qw(:all);
 ###############################################################################
 # By Jim Hester
 # Created: 2013 Apr 19 10:57:28 AM
-# Last Modified: 2013 May 06 02:08:28 PM
+# Last Modified: 2013 Jul 01 03:41:41 PM
 # Title:add_external_scripts.pl
 # Purpose:Add external scripts as code blocks
 ###############################################################################
@@ -58,28 +58,34 @@ while ( $data =~ m/$included_regex/g ) {
 }
 
 my $sub_regex =
-  qr/ ( ```{r [^}]+ engine [\s='"]+ $engine_group [^}]+ ) } ( [^`]+ ``` )/xims;
+  qr/ ``` ( {r [^}]+ ) } ( [^`]+ ) ``` /xims;
 
 $data =~ s{$sub_regex}{
   my($options, $block) = ($1, $2);
   my($pre)='';
-  my @scripts;
-  while($block =~ m{ ([\S]+ ($suffix_group) ) }xmsg){
-    my ($script_name, $suffix) = ($1, $2);
+  my @files;
+  #do not include output files in the dependencies
+  while($block =~ m{ ((?<!>\ )[\S]+) }xmsg){
+    my ($test_file) = ($1);
+    if(-f $test_file and -T $test_file){
+      push @files, $test_file;
 
-    $pre .= generate_script_include_block($script_name, $suffix);
-    push @scripts, $script_name;
+      if($test_file =~ m{ ([\S]+ ($suffix_group) ) }){
+        my ($script_name, $suffix) = ($1, $2);
+        $pre .= generate_script_include_block($script_name, $suffix);
+      }
+    }
   }
-  $options = generate_cache_dependency_options($options, \@scripts);
-  $pre . $options . '\}' . $block;
+  $options = generate_cache_dependency_options($options, \@files);
+  '```' . $pre . $options . '\}' . $block . '```';
 }eg;
 
 print $data;
 
 sub generate_cache_dependency_options {
-  my ( $options, $script_name_ref ) = @_;
-  return $options unless @{$script_name_ref};
-  my %dependencies = map { $_ => 1 } @{$script_name_ref};
+  my ( $options, $filename_ref ) = @_;
+  return $options unless @{$filename_ref};
+  my %dependencies = map { $_ => 1 } @{$filename_ref};
 
   my $cache_extra_regex =
     qr/ ( cache [.] extra \s* = \s* mtime ) [(] (?:c[(])* ([^)]+) [)] [)]* /xims;
@@ -133,6 +139,7 @@ sub generate_script_include_block {
 sub relative_path {
   my ($script_name) = @_;
 
+  return '' unless $script_name =~ /\w/;
   return $script_name if -e $script_name;
 
   #TODO this may be broken if your shells path does not use which
