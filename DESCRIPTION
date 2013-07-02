@@ -1,13 +1,13 @@
 Package: 
 Maintainer: Jim Hester <james.f.hester@gmail.com>
 Author: Jim Hester
-Version: 1.0
-License: GPL-3
+Version: 0.1
+License: GPL-2
 Title: 
 Description: 
 VignetteBuilder: knitr
+SystemRequirements: perl (>=5.8.8)
 Suggests:
-    testthat,
-    roxygen2,
-    knitr
-Collate:
+  testthat,
+  roxygen2,
+  knitr
