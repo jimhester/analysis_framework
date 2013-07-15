@@ -5,7 +5,7 @@ use autodie qw(:all);
 ###############################################################################
 # By Jim Hester
 # Created: 2013 Apr 19 10:57:28 AM
-# Last Modified: 2013 Jul 01 03:41:41 PM
+# Last Modified: 2013 Jul 15 11:26:01 AM
 # Title:add_external_scripts.pl
 # Purpose:Add external scripts as code blocks
 ###############################################################################
@@ -66,11 +66,12 @@ $data =~ s{$sub_regex}{
   my @files;
   #do not include output files in the dependencies
   while($block =~ m{ ((?<!>\ )[\S]+) }xmsg){
-    my ($test_file) = ($1);
-    if(-f $test_file and -T $test_file){
-      push @files, $test_file;
+    my ($rel_path) = relative_path($1);
+    my ($abs_path) = glob($rel_path);
+    if(-f $abs_path){
+      push @files, $rel_path;
 
-      if($test_file =~ m{ ([\S]+ ($suffix_group) ) }){
+      if($rel_path =~ m{ ([\S]+ ($suffix_group) ) }){
         my ($script_name, $suffix) = ($1, $2);
         $pre .= generate_script_include_block($script_name, $suffix);
       }
@@ -109,7 +110,7 @@ sub generate_cache_dependency_options {
 
 sub generate_concat {
   return
-    'c(' . join( ', ', map { q['] . relative_path($_) . q['] } @_ ) . ')';
+    'c(' . join( ', ', map { q['] . $_ . q['] } @_ ) . ')';
 }
 
 sub generate_script_include_block {
@@ -138,12 +139,12 @@ sub generate_script_include_block {
 
 sub relative_path {
   my ($script_name) = @_;
+  my($full_path) = glob($script_name);
 
-  return '' unless $script_name =~ /\w/;
-  return $script_name if -e $script_name;
+  return $script_name if -e $script_name or -e $full_path;
 
   #TODO this may be broken if your shells path does not use which
-  my $relative_path = `/usr/bin/which --show-tilde --show-dot $script_name`;
+  my $relative_path = `/usr/bin/which --show-tilde --show-dot -- '$script_name' 2>&-`;
   chomp $relative_path;
   return $relative_path;
 }
