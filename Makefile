@@ -15,4 +15,4 @@ all: full_report.html
     )"
 
 make clean:
-	rm -f *.md *.html
+	GLOBIGNORE=README.md && rm -f *.md *.html
