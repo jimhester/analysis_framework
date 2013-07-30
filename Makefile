@@ -2,7 +2,7 @@ CHOOSER=c('boot', 'code')
 BOOT_STYLE=NULL
 CODE_STYLE=NULL
 
-all: full_report.html
+all: full_report.html $(wildcard *.Rmd)
 
 %.html: %.Rmd
 	Rscript -e "\
