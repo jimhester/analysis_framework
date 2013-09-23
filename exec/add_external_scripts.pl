@@ -5,7 +5,7 @@ use autodie qw(:all);
 ###############################################################################
 # By Jim Hester
 # Created: 2013 Apr 19 10:57:28 AM
-# Last Modified: 2013 Jul 18 11:09:51 AM
+# Last Modified: 2013 Jul 22 10:11:55 AM
 # Title:add_external_scripts.pl
 # Purpose:Add external scripts as code blocks
 ###############################################################################
@@ -142,7 +142,7 @@ sub relative_path {
   $script_name =~ s/[']//g;
   my($full_path) = glob($script_name);
 
-  return $script_name if -e $script_name or -e $full_path;
+  return $script_name if ($script_name and -e $script_name) or ($full_path and -e $full_path);
 
   #TODO this may be broken if your shells path does not use which
   my $relative_path = `/usr/bin/which --show-tilde --show-dot -- '$script_name' 2>&-`;
