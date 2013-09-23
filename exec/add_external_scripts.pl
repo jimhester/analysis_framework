@@ -5,7 +5,7 @@ use autodie qw(:all);
 ###############################################################################
 # By Jim Hester
 # Created: 2013 Apr 19 10:57:28 AM
-# Last Modified: 2013 Jul 22 10:11:55 AM
+# Last Modified: 2013 Sep 23 01:34:03 PM
 # Title:add_external_scripts.pl
 # Purpose:Add external scripts as code blocks
 ###############################################################################
@@ -69,10 +69,10 @@ $data =~ s{$sub_regex}{
     my ($rel_path) = relative_path($1);
     my ($abs_path) = glob($rel_path);
     if(-f $abs_path){
-      push @files, $rel_path;
 
       if($1 =~ m{ ([\S]+ ($suffix_group) ) }xms){
-        my ($script_name, $suffix) = ($1, $2);
+       push @files, $rel_path;
+       my ($script_name, $suffix) = ($1, $2);
         $pre .= generate_script_include_block($script_name, $suffix);
       }
     }
